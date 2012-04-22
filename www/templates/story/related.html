@@ -1,0 +1,19 @@
+<div style="margin-left: 80px;margin-top: 30px">
+{% if link.old %}
+<h3>{% trans _('envíos que fueron similares') %}</h3>
+{% else %}
+<h3>{% trans _('envíos posiblemente similares') %}</h3>
+{% endif %}
+
+{% for l in related %}
+	{% exec l.get_box_class %}
+	<div class="news-summary">
+		<div class="news-body">
+			<div class="news-shakeit" style="margin: 0">
+				<div class="{{ l.box_class }}"><a href="{{ l.permalink }}">{{ l.total_votes }}</a></div>
+			</div>
+			<h3 style="font-size: 120%"><a href="{{ l.permalink }}"{% if l.status != 'published' %} rel="nofollow"{% endif %}>{{ l.title }}</a></h3>
+		</div>
+	</div><br/>
+{% endfor %}
+</div>

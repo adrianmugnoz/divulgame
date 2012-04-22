@@ -1,0 +1,3 @@
+RewriteEngine On
+RewriteRule ^ciencia/(.+)$ /story.php/$1 [L,NS]
+RewriteRule ^user/(.+)$ /user.php/$1 [L,NS]

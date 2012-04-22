@@ -1,0 +1,68 @@
+</div>
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-22797298-3']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+<div id="footthingy">
+<p>Divúlgame</p>
+<ul id="legalese">
+
+{# IMPORTANT: links change in every installation, CHANGE IT!!
+ contact info #}
+ 
+ 
+	<li>Divúlgame (beta) /</li>
+	<li><a href="{{ globals.legal }}">{% trans _('Condiciones Legales') %}</a>
+	<a href="{{ globals.base_url }}condiciones.php">{% trans _('y de Uso') %}</a>&nbsp;&#47;&nbsp;</li>
+	<li><a href="{{ globals.base_url }}faq-es.php">{% trans _('FAQ') %}</a>&nbsp;&#47;&nbsp;</li>
+	<li>{% trans _('Licencias') %}:&nbsp;
+	<a href="{{ globals.base_url }}COPYING">{% trans _('Código') %}</a>,&nbsp;
+	<a href="http://creativecommons.org/licenses/by-sa/2.5/">{% trans _('Gráficos') %}</a>,&nbsp;
+	<a href="http://creativecommons.org/licenses/by/2.5/es/">{% trans _('Contenido') %}</a>&nbsp;&#47;&nbsp;</li>
+	<li><a href="http://divulgame.net/Divulgamebeta-r2967.zip">{% trans _('Descargar Código') %}</a>&nbsp;&#47;&nbsp;</li>
+	<li><a href="http://www.interdominios.com">{% trans _('Hosting') %}</a> con Interdominios</li> 
+
+
+</ul>
+<ul id="stdcompliance">
+<script type="text/javascript" src="http://widgets.amung.us/small.js"></script><script type="text/javascript">WAU_small('7z0vkqgw10ub')</script>
+<li><a href="http://validator.w3.org/check?uri=referer"><img style="border:0;width:80px;height:15px" src="{{ globals.base_static }}img/common/valid-xhtml10.gif" alt="Valid XHTML 1.0 Transitional" width="80" height="15"/></a></li>
+{# <li><a href="http://jigsaw.w3.org/css-validator/check/referer?profile=css3"><img style="border:0;width:80px;height:15px" src="{{ globals.base_static }}img/common/valid-css.gif" alt="Valid CSS" width="80" height="15"/></a></li> #}
+<li><a href="http://feedvalidator.org/check.cgi?url=http://{{ globals.server_name }}/rss2.php?local"><img style="border:0;width:80px;height:15px" src="{{ globals.base_static }}img/common/valid-rss.gif" alt="Valid RSS" title="Validate my RSS feed" width="80" height="15"/></a></li>
+</ul>
+</div>
+
+
+{# fancybox #}
+{% if globals.fancybox_enabled %}
+	<script type="text/javascript" src="{{globals.base_static}}js/fancybox/jquery.fancybox-1.3.4.pack.js"></script>
+	{% include 'fancybox.html' %}
+{% endif %}
+
+{% for js in globals.post_js %}
+	{% if js|substr:"0, 4" == 'http' %}
+		<script src="{{js}}" type="text/javascript"></script>
+	{% else %}
+		<script src="{{globals.base_static}}js/{{js}}" type="text/javascript"></script>
+	{% endif %}
+{% endfor %}
+
+{# warn warn warn
+  dont do stats of password recovering pages #}
+
+{% spacefull %}
+</div>
+{% try_include 'private/stats.html' %}
+</body>
+{% meneame_endtime %}
+{% endspacefull %}
+</html>

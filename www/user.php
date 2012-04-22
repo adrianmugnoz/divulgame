@@ -1,0 +1,680 @@
+<?
+// The source code packaged with this file is Free Software, Copyright (C) 2005 by
+// Ricardo Galli <gallir at uib dot es>.
+// It's licensed under the AFFERO GENERAL PUBLIC LICENSE unless stated otherwise.
+// You can get copies of the licenses here:
+//				http://www.affero.org/oagpl.html
+// AFFERO GENERAL PUBLIC LICENSE is also included in the file called "COPYING".
+include('config.php');
+include(mnminclude.'html1.php');
+include(mnminclude.'geo.php');
+include(mnminclude.'favorites.php');
+
+
+$offset=(get_current_page()-1)*$page_size;
+$globals['ads'] = true;
+
+
+if (!empty($globals['base_user_url']) && !empty($_SERVER['PATH_INFO'])) {
+	$url_args = preg_split('/\/+/', $_SERVER['PATH_INFO'], 6, PREG_SPLIT_NO_EMPTY);
+	$_REQUEST['login'] = clean_input_string($url_args[0]);
+	$_REQUEST['view'] = $url_args[1];
+	$_REQUEST['uid'] = intval($url_args[2]);
+	if (! $_REQUEST['uid'] && is_numeric($_REQUEST['view'])) {
+		// This is a empty view but an user_id, change it
+		$_REQUEST['uid'] = intval($_REQUEST['view']);
+		$_REQUEST['view'] = '';
+	}
+} else {
+	$_REQUEST['login'] = clean_input_string($_REQUEST['login']);
+	$_REQUEST['uid'] = intval($_REQUEST['uid']);
+	if (!empty($globals['base_user_url']) && !empty($_REQUEST['login'])) {
+		header('Location: ' . html_entity_decode(get_user_uri($_REQUEST['login'], clean_input_string($_REQUEST['view']))));
+		die;
+	}
+}
+
+$login = clean_input_string($_REQUEST['login']);
+if(empty($login)){
+	if ($current_user->user_id > 0) {
+		header('Location: ' . html_entity_decode(get_user_uri($current_user->user_login)));
+		die;
+	} else {
+		header('Location: '.$globals['base_url']);
+		die;
+	}
+}
+
+
+$uid = $_REQUEST['uid']; // Should be clean before
+
+$user=new User();
+
+if ($current_user->admin) {
+		// Check if it's used UID
+		if($uid) {
+			$user->id = $uid;
+		} else {
+			header('Location: ' . html_entity_decode(get_user_uri_by_uid($login, $_REQUEST['view'])));
+			die;
+		}
+} else {
+		if($uid > 0) {
+			// Avoid anonymous and non admins users to use the id, it's a "duplicated" page
+			header('Location: ' . html_entity_decode(get_user_uri($login, $_REQUEST['view'])));
+			die;
+		}
+		$user->username = $login;
+}
+
+if(!$user->read()) {
+	do_error(_('usuario inexistente'), 404);
+}
+$login = $user->username; // Just in case, we user the database username
+
+$globals['search_options'] = array('u' => $user->username);
+
+$view = clean_input_string($_REQUEST['view']);
+if(empty($view)) $view = 'profile';
+
+
+// The profile's use marked the current one as friend
+if ($current_user->user_id) {
+	$user->friendship = User::friend_exists($user->id, $current_user->user_id);
+} else {
+	$user->friendship = 0;
+}
+
+// For editing notes and sending privates
+if ($current_user->user_id == $user->id || $current_user->admin || $user->friendship) {
+	$globals['extra_js'][] = 'jquery-form.pack.js';
+	$globals['extra_js'][] = 'ajaxupload.min.js';
+}
+
+// Enable user AdSense
+// do_user_ad: 0 = noad, > 0: probability n/100
+// 100 if the user is the current one
+if($globals['external_user_ads'] && !empty($user->adcode)) {
+	$globals['user_adcode'] = $user->adcode;
+	$globals['user_adchannel'] = $user->adchannel;
+	if ($current_user->user_id == $user->id || $current_user->admin) $globals['do_user_ad']  = 100;
+	else $globals['do_user_ad'] = $user->karma * 2;
+}
+
+// Load Google GEO
+if (! $user->disabled()
+		&& $view == 'profile'
+		&& $globals['google_maps_api']
+		&& (($globals['latlng']=$user->get_latlng()) || $current_user->user_id == $user->id)) {
+	if ($current_user->user_id == $user->id) {
+		geo_init('geo_coder_editor_load', $globals['latlng'], 7, 'user');
+	} else {
+		geo_init('geo_coder_load', $globals['latlng'], 7, 'user');
+	}
+	$globals['do_geo'] = true;
+}
+
+// Check if it should be index AND if they are valids options, otherwise call do_error()
+switch ($view) {
+	case 'categories':
+	case 'history':
+	case 'shaken':
+	case 'friends_shaken':
+	case 'friends':
+	case 'friends_new':
+	case 'friend_of':
+	case 'ignored':
+	case 'favorites':
+		$globals['noindex'] = true;
+		breaK;
+	case 'commented':
+	case 'conversation':
+	case 'shaken_comments':
+	case 'favorite_comments':
+		$globals['search_options']['w'] = 'comments';
+		$globals['noindex'] = true;
+		breaK;
+	case 'profile':
+		$globals['noindex'] = false;
+		breaK;
+	default:
+		do_error(_('opción inexistente'), 404);
+		break;
+}
+
+// Add canonical address
+$globals['extra_head'] = '<link rel="canonical" href="http://'.get_server_name().get_user_uri($user->username).'" />'."\n";
+
+if (!empty($user->names)) {
+	do_header("$login ($user->names)");
+} else {
+	do_header($login);
+}
+
+// Used to show the user the number of unread answers to her comments
+if ($current_user->user_id == $user->id) {
+	$globals['extra_comment_conversation'] = ' ['.Comment::get_unread_conversations($user->id).']';
+} else {
+	$globals['extra_comment_conversation'] = '';
+}
+
+echo '<div id="wrap">'."\n";
+
+$url_login = urlencode($login);
+switch ($view) {
+	case 'history':
+		echo '<div id="wrap">'."\n";do_user_tabs(2, $login, true);echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_history();echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_pages($rows, $page_size);echo '</div>'."\n";
+		break;
+	case 'commented':
+		echo '<div id="wrap">'."\n";do_user_tabs(3, $login, true);echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_commented();echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_pages($rows, $page_size, false);echo '</div>'."\n";
+		break;
+	case 'shaken':
+		echo '<div id="wrap">'."\n";do_user_tabs(2, $login, true);echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_shaken();echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_pages($rows, $page_size);echo '</div>'."\n";
+		break;
+	case 'friends_shaken':
+		echo '<div id="wrap">'."\n";do_user_tabs(2, $login, true);echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_friends_shaken();echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_pages(-1, $page_size);echo '</div>'."\n";
+		break;
+	case 'friends':
+		echo '<div id="wrap">'."\n";do_user_tabs(7, $login, true);echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_friends(0);echo '</div>'."\n";
+		break;
+	case 'friend_of':
+		echo '<div id="wrap">'."\n";do_user_tabs(7, $login, true);echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_friends(1);echo '</div>'."\n";
+		break;
+	case 'ignored':
+		echo '<div id="wrap">'."\n";do_user_tabs(7, $login, true);echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_friends(2);echo '</div>'."\n";
+		break;
+	case 'friends_new':
+		echo '<div id="wrap">'."\n";do_user_tabs(7, $login, true);echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_friends(3);echo '</div>'."\n";
+		break;
+	case 'favorites':
+		echo '<div id="wrap">'."\n";do_user_tabs(2, $login, true);echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_favorites();echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_pages($rows, $page_size);echo '</div>'."\n";
+		break;
+	case 'favorite_comments':
+		echo '<div id="wrap">'."\n";do_user_tabs(3, $login, true);echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_favorite_comments();echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_pages($rows, $page_size);echo '</div>'."\n";
+		break;
+	case 'shaken_comments':
+		echo '<div id="wrap">'."\n";do_user_tabs(3, $login, true);echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_shaken_comments();echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_pages($rows, $page_size);echo '</div>'."\n";
+		break;
+	case 'categories':
+		echo '<div id="wrap">'."\n";do_user_tabs(1, $login, true);echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_categories();echo '</div>'."\n";
+		break;
+	case 'conversation':
+		echo '<div id="wrap">'."\n";do_user_tabs(3, $login, true);echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_conversation();echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_pages($rows, $page_size, false);echo '</div>'."\n";
+		break;
+	case 'profile':
+		echo '<div id="wrap">'."\n";do_user_tabs(1, $login, true);echo '</div>'."\n";
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_profile();echo '</div>'."\n";
+		break;
+	default:
+		echo '<div id="singlewrap" style="margin: 0 40px; padding-top: 5px">'."\n";do_error(_('opción inexistente'), 404);echo '</div>'."\n";
+		break;
+}
+
+echo '</div>'."\n";
+
+do_footer();
+
+
+function do_profile() {
+	global $user, $current_user, $login, $db, $globals;
+
+	$options = array();
+	$options[$user->username] = get_user_uri($user->username);
+	$options[_('categorías personalizadas')] = get_user_uri($user->username, 'categories');
+	if ($current_user->user_id == $user->id || $current_user->user_level == 'god') {
+		$options[_('modificar perfil').' &rarr;'] = $globals['base_url'].'profile.php?login='.urlencode($login);
+	}
+
+	$post = new Post;
+	if (!$post->read_last($user->id)) {
+		$post = NULL;
+	}
+	if(!empty($user->url)) {
+		if ($user->karma < 10) $nofollow = 'rel="nofollow"';
+		if (!preg_match('/^http/', $user->url)) $url = 'http://'.$user->url;
+		else $url = $user->url;
+	}
+
+	if ($current_user->user_id > 0 && $current_user->user_id != $user->id) {
+		$friend_icon = User::friend_teaser($current_user->user_id, $user->id);
+	}
+
+	$selected  = 0;
+	$rss	   = 'rss2.php?sent_by='.$user->id;
+	$rss_title = _('envíos en rss2');
+	$geodiv    = $current_user->user_id > 0 && $current_user->user_id != $user->id && $globals['latlng'] && ($my_latlng = geo_latlng('user', $current_user->user_id));
+	$show_email = $current_user->user_id > 0 && !empty($user->public_info) &&
+			($current_user->user_id == $user->id || $current_user->user_level=='god');
+
+	$clones_from = "and clon_date > date_sub(now(), interval 30 day)";
+	if ($current_user->admin) {
+			$nclones = $db->get_var("select count(distinct clon_to) from clones where clon_from = $user->id $clones_from");
+	}
+
+	$user->all_stats();
+
+	if ($user->total_links > 1) {
+		$entropy = intval(($user->blogs() - 1) / ($user->total_links - 1) * 100);
+	}
+
+	if ($user->total_links > 0 && $user->published_links > 0) {
+		$percent = intval($user->published_links/$user->total_links*100);
+	} else {
+		$percent = 0;
+	}
+
+	if($globals['do_geo'] && $current_user->user_id == $user->id) {
+		ob_start();
+		geo_coder_print_form('user', $current_user->user_id, $globals['latlng'], _('ubícate en el mapa (si te apetece)'), 'user');
+		$geo_form = ob_get_clean();
+	}
+
+	if ($current_user->user_level == 'god' &&  ! $user->admin ) { // gods and admins know each other for sure, keep privacy
+		$dbaddresses = $db->get_results("select INET_NTOA(vote_ip_int) as ip from votes where vote_type='links' and vote_user_id = $user->id order by vote_date desc limit 30");
+
+		// Try with comments
+		if (! $dbaddresses) {
+			$dbaddresses = $db->get_results("select comment_ip as ip from comments where comment_user_id = $user->id and comment_date > date_sub(now(), interval 30 day) order by comment_date desc limit 30");
+		}
+
+		if (! $dbaddresses) {
+			// Use register IP
+			$dbaddresses = $db->get_results("select user_ip as ip from users where user_id = $user->id");
+		}
+
+		$addresses	  = array();
+		$prev_address = '';
+		foreach ($dbaddresses as $dbaddress) {
+			$ip_pattern = preg_replace('/\.[0-9]+$/', '', $dbaddress->ip);
+			if($ip_pattern != $prev_address) {
+				$addresses[] = $ip_pattern;
+				$clone_counter++;
+				$prev_address = $ip_pattern;
+				if ($clone_counter >= 30) break;
+			}
+		}
+	}
+
+	$vars = compact(
+		'post', 'options', 'selected', 'rss', 'rss_title', 'current_user',
+		'user', 'my_latlng', 'url', 'nofollow', 'nclones', 'show_email',
+		'entropy', 'percent', 'geo_form', 'addresses', 'friend_icon'
+	);
+
+	return Haanga::Load('/user/profile.html', $vars);
+}
+
+
+function do_history () {
+	global $db, $rows, $user, $offset, $page_size, $globals;
+
+	do_user_subheader(array(_('envíos propios') => get_user_uri($user->username, 'history'), _('votados') => get_user_uri($user->username, 'shaken'), _('favoritos') => get_user_uri($user->username, 'favorites'), _('votados por amigos') => get_user_uri($user->username, 'friends_shaken')), 0,
+		'rss2.php?sent_by='.$user->id, _('envíos en rss2'));
+	$link = new Link;
+	$rows = $db->get_var("SELECT count(*) FROM links WHERE link_author=$user->id AND link_votes > 0");
+	$links = $db->get_col("SELECT link_id FROM links WHERE link_author=$user->id AND link_votes > 0 ORDER BY link_date DESC LIMIT $offset,$page_size");
+	if ($links) {
+		foreach($links as $link_id) {
+			$link->id=$link_id;
+			$link->read();
+			$link->print_summary('short');
+		}
+	}
+}
+
+function do_favorites () {
+	global $db, $rows, $user, $offset, $page_size, $globals;
+
+	do_user_subheader(array(_('envíos propios') => get_user_uri($user->username, 'history'), _('votados') => get_user_uri($user->username, 'shaken'), _('favoritos') => get_user_uri($user->username, 'favorites'), _('votados por amigos') => get_user_uri($user->username, 'friends_shaken')), 2,
+		'rss2.php?favorites='.$user->id.'&amp;option=favorites&amp;url=source', _('favoritos en rss2'));
+	$link = new Link;
+	$rows = $db->get_var("SELECT count(*) FROM favorites WHERE favorite_user_id=$user->id AND favorite_type='link'");
+	$links = $db->get_col("SELECT link_id FROM links, favorites WHERE favorite_user_id=$user->id AND favorite_type='link' AND favorite_link_id=link_id ORDER BY link_date DESC LIMIT $offset,$page_size");
+	if ($links) {
+		foreach($links as $link_id) {
+			$link->id=$link_id;
+			$link->read();
+			$link->print_summary('short');
+		}
+	}
+}
+
+function do_shaken () {
+	global $db, $rows, $user, $offset, $page_size, $globals;
+
+	if ($globals['bot']) return;
+
+	do_user_subheader(array(_('envíos propios') => get_user_uri($user->username, 'history'), _('votados') => get_user_uri($user->username, 'shaken'), _('favoritos') => get_user_uri($user->username, 'favorites'), _('votados por amigos') => get_user_uri($user->username, 'friends_shaken')), 1,
+		'rss2.php?voted_by='.$user->id, _('votadas en rss2'));
+	$link = new Link;
+	$rows = $db->get_var("SELECT count(*) FROM votes WHERE vote_type='links' and vote_user_id=$user->id");
+	$links = $db->get_results("SELECT vote_link_id as id, vote_value FROM votes WHERE vote_type='links' and vote_user_id=$user->id ORDER BY vote_date DESC LIMIT $offset,$page_size");
+	if ($links) {
+		foreach($links as $linkdb) {
+			$link->id=$linkdb->id;
+			$link->read();
+			if ($link->author == $user->id) continue;
+			echo '<div style="max-width: 60em">';
+			$link->print_summary('short', 0, false);
+			if ($linkdb->vote_value < 0) {
+				echo '<div class="box" style="z-index:1;margin:0 0 -5x 0;background:#FF3333;position:relative;top:-5px;left:85px;width:8em;padding: 1px 1px 1px 1px;border-color:#f00;opacity:0.9;text-align:center;font-size:0.9em;color:#fff;text-shadow: 0 1px 0 #000">';
+				echo get_negative_vote($linkdb->vote_value);
+				echo "</div>\n";
+			}
+			echo "</div>\n";
+		}
+		echo '<br/><span style="color: #FF6400;"><strong>'._('Nota').'</strong>: ' . _('sólo se visualizan los votos de los últimos meses') . '</span><br />';
+	}
+}
+
+function do_friends_shaken () {
+	global $db, $rows, $user, $offset, $page_size, $globals;
+
+	if ($globals['bot']) return;
+
+	do_user_subheader(array(_('envíos propios') => get_user_uri($user->username, 'history'), _('votados') => get_user_uri($user->username, 'shaken'), _('favoritos') => get_user_uri($user->username, 'favorites'), _('votados por amigos') => get_user_uri($user->username, 'friends_shaken')), 3);
+
+	$friends = $db->get_col("select friend_to from friends where friend_type = 'manual' and friend_from = $user->id and friend_value > 0");
+	if ($friends) {
+		$friends_list = implode(',', $friends);
+		$sql = "select distinct vote_link_id as link_id from votes where vote_type = 'links' and vote_user_id in ($friends_list) and vote_value > 0 order by vote_link_id desc";
+
+		$links = $db->get_results("$sql LIMIT $offset,$page_size");
+	}
+
+	if ($links) {
+		foreach($links as $dblink) {
+			$link = Link::from_db($dblink->link_id);
+			$link->do_inline_friend_votes = true;
+			$link->print_summary();
+		}
+	}
+
+}
+
+
+function do_commented () {
+	global $db, $rows, $user, $offset, $page_size, $globals, $current_user;
+
+	do_user_subheader(array(_('mis comentarios') => get_user_uri($user->username, 'commented'), _('conversación').$globals['extra_comment_conversation'] => get_user_uri($user->username, 'conversation'), _('votados') => get_user_uri($user->username, 'shaken_comments'), _('favoritos') => get_user_uri($user->username, 'favorite_comments')), 0,
+		'comments_rss2.php?user_id='.$user->id, _('comentarios en rss2'));
+	$rows = $db->get_var("SELECT count(*) FROM comments WHERE comment_user_id=$user->id");
+	$comments = $db->get_results("SELECT comment_id, link_id, comment_type FROM comments, links WHERE comment_user_id=$user->id and link_id=comment_link_id ORDER BY comment_date desc LIMIT $offset,$page_size");
+	if ($comments) {
+		print_comment_list($comments, $user);
+	}
+}
+
+function do_conversation () {
+	global $db, $rows, $user, $offset, $page_size, $globals, $current_user;
+
+	do_user_subheader(array(_('mis comentarios') => get_user_uri($user->username, 'commented'), _('conversación').$globals['extra_comment_conversation'] => get_user_uri($user->username, 'conversation'), _('votados') => get_user_uri($user->username, 'shaken_comments'), _('favoritos') => get_user_uri($user->username, 'favorite_comments')), 1,
+		'comments_rss2.php?answers_id='.$user->id, _('conversación en rss2'));
+	$rows = $db->get_var("SELECT count(distinct(conversation_from)) FROM conversations WHERE conversation_user_to=$user->id and conversation_type='comment'");
+	$comments = $db->get_results("SELECT distinct comment_id, link_id, comment_type FROM conversations, comments, links WHERE conversation_user_to=$user->id and conversation_type='comment' and comment_id=conversation_from and link_id=comment_link_id ORDER BY conversation_time desc LIMIT $offset,$page_size");
+	if ($comments) {
+		$last_read = print_comment_list($comments, $user);
+	}
+	if ($last_read > 0 && $current_user->user_id == $user->id) {
+		Comment::update_read_conversation($timestamp_read);
+	}
+}
+
+function do_favorite_comments () {
+	global $db, $rows, $user, $offset, $page_size, $globals;
+
+	do_user_subheader(array(_('mis comentarios') => get_user_uri($user->username, 'commented'), _('conversación').$globals['extra_comment_conversation'] => get_user_uri($user->username, 'conversation'), _('votados') => get_user_uri($user->username, 'shaken_comments'), _('favoritos') => get_user_uri($user->username, 'favorite_comments')), 3);
+	$comment = new Comment;
+	$rows = $db->get_var("SELECT count(*) FROM favorites WHERE favorite_user_id=$user->id AND favorite_type='comment'");
+	$comments = $db->get_col("SELECT comment_id FROM comments, favorites WHERE favorite_user_id=$user->id AND favorite_type='comment' AND favorite_link_id=comment_id ORDER BY comment_id DESC LIMIT $offset,$page_size");
+	if ($comments) {
+		echo '<ol class="comments-list">';
+		foreach($comments as $comment_id) {
+			$comment->id=$comment_id;
+			$comment->read();
+			echo '<li>';
+			$comment->print_summary($link, 2000, false);
+			echo '</li>';
+		}
+		echo "</ol>\n";
+	}
+}
+
+function do_shaken_comments () {
+	global $db, $rows, $user, $offset, $page_size, $globals;
+
+	do_user_subheader(array(_('mis comentarios') => get_user_uri($user->username, 'commented'), _('conversación').$globals['extra_comment_conversation'] => get_user_uri($user->username, 'conversation'), _('votados') => get_user_uri($user->username, 'shaken_comments'), _('favoritos') => get_user_uri($user->username, 'favorite_comments')), 2);
+
+	$comment = new Comment;
+	$rows = $db->get_var("SELECT count(*) FROM votes, comments WHERE vote_type='comments' and vote_user_id=$user->id and comment_id = vote_link_id and comment_user_id != vote_user_id");
+	$comments = $db->get_results("SELECT vote_link_id as id, vote_value as value FROM votes, comments WHERE vote_type='comments' and vote_user_id=$user->id  and comment_id = vote_link_id and comment_user_id != vote_user_id ORDER BY vote_date DESC LIMIT $offset,$page_size");
+	if ($comments) {
+		echo '<ol class="comments-list">';
+		foreach($comments as $c) {
+			$comment->id=$c->id;
+			if ($c->value > 0) $color = '#00d';
+			else $color = '#f00';
+			$comment->read();
+			if ($comment->author != $user->id && ! $comment->admin) {
+				echo '<li>';
+				$comment->print_summary(false, 1000, false);
+				echo '<div class="box" style="margin:0 0 -16px 0;background:'.$color.';position:relative;top:-22px;left:0px;width:30px;height:12px;border-color:'.$color.';opacity: 0.7"></div>';
+				echo '</li>';
+			}
+		}
+		echo "</ol>\n";
+	}
+}
+
+function print_comment_list($comments, $user) {
+	global $globals, $current_user;
+
+	$link = new Link;
+	$comment = new Comment;
+
+	$timestamp_read = 0;
+
+	$ids = array();
+	foreach ($comments as $dbcomment) {
+		$link->id=$dbcomment->link_id;
+		$comment = Comment::from_db($dbcomment->comment_id);
+		// Don't show admin comment if it's her own profile.
+		if ($comment->type == 'admin' && ! $current_user->admin && $user->id == $comment->author) continue;
+		if ($last_link != $link->id) {
+			$link->read();
+			echo '<h4>';
+			echo '<a href="'.$link->get_permalink().'">'. $link->title. '</a>';
+			echo ' ['.$link->comments.']';
+			echo '</h4>';
+			$last_link = $link->id;
+		}
+		if ($comment->date > $timestamp_read) $timestamp_read = $comment->date;
+		echo '<ol class="comments-list">';
+		echo '<li>';
+		$comment->print_summary($link, 2000, false);
+		echo '</li>';
+		echo "</ol>\n";
+		$ids[] = $comment->id;
+	}
+	Haanga::Load('get_total_answers_by_ids.html', array('type' => 'comment', 'ids' => implode(',', $ids)));
+	// Return the timestamp of the most recent comment
+	return $timestamp_read;
+}
+
+
+function do_friends($option) {
+	global $db, $user, $globals, $current_user;
+
+
+	$header_options = array(_('amigos') => get_user_uri($user->username, 'friends'), _('elegido por') => get_user_uri($user->username, 'friend_of'));
+	if ($user->id == $current_user->user_id) {
+		$header_options[_('ignorados')] = get_user_uri($user->username, 'ignored');
+		$header_options[_('nuevos')] = get_user_uri($user->username, 'friends_new');
+	}
+
+
+	$prefered_id = $user->id;
+	$prefered_admin = $user->admin;
+	switch ($option) {
+		case 3:
+			do_user_subheader($header_options, $option);
+			$prefered_type = 'new';
+			break;
+		case 2:
+			do_user_subheader($header_options, $option);
+			$prefered_type = 'ignored';
+			break;
+		case 1:
+			$prefered_type = 'to';
+			do_user_subheader($header_options, $option);
+			break;
+		default:
+			do_user_subheader($header_options, $option, 'rss2.php?friends_of='.$user->id, _('envíos de amigos en rss2'));
+			$prefered_type = 'from';
+	}
+	echo '<div style="padding: 5px 0px 10px 5px">';
+	echo '<div id="'.$prefered_type.'-container">'. "\n";
+	require('backend/get_friends_bars.php');
+	echo '</div>'. "\n";
+	echo '</div>'. "\n";
+
+	// Post processing
+	switch ($option) {
+		case 3:
+			if ($user->id == $current_user->user_id) {
+				User::update_new_friends_date();
+			}
+			break;
+		default:
+	}
+}
+
+function do_user_tabs($option, $user, $has_subheader = false) {
+	
+	global $globals, $current_user;
+
+	$active = array();
+	$active[$option] = ' class="tabmain-this"';
+
+	if ($has_subheader) {
+		echo '<ul class="tabmain" style="margin-bottom: 0">'."\n";
+	} else {
+		echo '<ul class="tabmain">'."\n";
+	}
+	echo '<li'.$active[1].'><a href="'.get_user_uri($user).'">'._('personal'). '</a></li>';
+	// echo '<li'.$active[8].'><a href="'.get_user_uri($user, 'categories').'">'._('personalización'). '</a></li>';
+	//echo '<li'.$active[9].'><a href="'.get_user_uri($user, 'conversation').'">'._('conversación'). '</a></li>';
+	echo '<li'.$active[7].'><a href="'.get_user_uri($user, 'friends').'">&nbsp;<img src="'.$globals['base_static'].'img/common/icon_friend_bi_00.png" alt="amigos e ignorados" width="18" height="16" title="'._('amigos e ignorados').'"/>&nbsp;</a></li>';
+	echo '<li'.$active[2].'><a href="'.get_user_uri($user, 'history').'">'._('enlaces'). '</a></li>';
+	//echo '<li'.$active[6].'><a href="'.get_user_uri($user, 'favorites').'">&nbsp;'.FAV_YES. '&nbsp;</a></li>';
+	echo '<li'.$active[3].'><a href="'.get_user_uri($user, 'commented').'">'._('comentarios'). '</a></li>';
+	//echo '<li'.$active[4].'><a href="'.get_user_uri($user, 'shaken').'">'._('votadas'). '</a></li>';
+	echo '<li><a href="'.post_get_base_url($user).'">'._('notas'). '&nbsp;&rarr;</a></li>';
+	echo '</ul>';
+}
+
+
+
+function do_categories() {
+	global $globals, $current_user, $db, $user, $login;
+
+	$options = array();
+	$options[$user->username] = get_user_uri($user->username);
+	$options[_('categorías personalizadas')] = get_user_uri($user->username, 'categories');
+	if ($current_user->user_id == $user->id || $current_user->user_level == 'god') {
+		$options[_('modificar perfil').' &rarr;'] = $globals['base_url'].'profile.php?login='.urlencode($login);
+	}
+
+	do_user_subheader($options, 1, 'rss2.php?personal='.$user->id, _('categorías personalizadas en rss2'));
+
+	if (is_array($_POST['categories'])) {
+		$db->query("delete from prefs where pref_user_id = $current_user->user_id and pref_key = 'category'");
+		$total = (int) $db->get_var("SELECT count(*) FROM categories WHERE category_parent != 0");
+		if (count($_POST['categories']) < $total) {
+			for ($i=0; $i<count($_POST['categories']); $i++){
+				$cat = intval($_POST['categories'][$i]);
+				$db->query("insert into prefs (pref_user_id, pref_key, pref_value) values ($current_user->user_id, 'category', $cat)");
+			}
+		}
+	}
+	print_categories_checkboxes($user);
+}
+
+function print_categories_checkboxes($user) {
+	global $db, $current_user;
+
+
+	// Get selected categories
+	$selected_set = $db->get_col("SELECT pref_value FROM prefs WHERE pref_user_id = $user->id and pref_key = 'category' ");
+	$selected = array();
+	if ($selected_set) {
+		foreach ($selected_set as $cat) {
+			$selected[$cat] = true;
+		}
+	}
+
+	$metas = $db->get_results("SELECT category_id, category_name FROM categories WHERE category_parent = 0 ORDER BY category_name ASC");
+	$categories = array();
+	foreach ($metas as $meta) {
+		$categories[$meta->category_id] = $db->get_results("SELECT category_id, category_name FROM categories WHERE category_parent = $meta->category_id ORDER BY category_name ASC");
+		if ( $selected ) {
+			// Check if all categories are selected for the current meta
+			$all = true;
+			foreach ($categories[$meta->category_id] as $sel) {
+				if (!isset($selected[$sel->category_id])) $all = false;
+			}
+			if ($all) $selected[$meta->category_id] = true;
+		}
+	}
+
+	Haanga::Load('user/categories.html', compact('user', 'metas', 'categories', 'selected'));
+}
+
+function do_user_subheader($content, $selected = false, $rss = false, $rss_title = '') {
+	global $globals;
+
+// arguments: hash array with "button text" => "button URI"; Nº of the selected button
+	echo '<ul class="subheader" style="margin-bottom: 20px">'."\n";
+	if ($rss) {
+		echo '<li class="icon"><a href="'.$globals['base_url'].$rss.'" title="'.$rss_title.'" rel="rss"><img src="'.$globals['base_static'].'img/common/feed-icon-001.png" width="18" height="18" alt="rss2"/></a></li>';
+	} else {
+		echo '<li class="icon"><img src="'.$globals['base_static'].'img/common/feed-icon-gy-001.png" width="18" height="18" alt=""/></li>';
+	}
+	if (is_array($content)) {
+		$n = 0;
+		foreach ($content as $text => $url) {
+			if ($selected == $n) $class_b = ' class = "selected"';
+			else $class_b='';
+			echo '<li'.$class_b.'>'."\n";
+			echo '<a href="'.$url.'">'.$text."</a>\n";
+			echo '</li>'."\n";
+			$n++;
+		}
+	} else {
+		echo '<h1>'.$content.'</h1>';
+	}
+	echo '</ul>'."\n";
+}
+
+?>
