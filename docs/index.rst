@@ -6,7 +6,7 @@ de la web. Tenga en cuenta que actualmente estamos desarrollando esta documentac
 que puede haber ciertos temas que no se hayan documentado en el momento de la visualización.
 
 
-Table of Contents
+Tabla de contenidos
 -----------------
 
 .. toctree::
@@ -14,16 +14,4 @@ Table of Contents
   getting_started
   perfiles
   creacion_sub
-  usos
-  faq
   notame
-
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

@@ -1,11 +1,12 @@
 Gestión del Sub
 ==============
-Un sub es una comunidad dentro de Divúlgame que gestionará el usuario que la cree. Cada universidad tendrá su propio sub y este será dado de alta en la edición universidades.
+Un sub es una comunidad dentro de Divúlgame que gestionará el usuario que la cree.
 
 Creación
 -------
 
 Para crear un sub únicamente hay que acceder a esta url estando logueado.
+
 
 Configuración
 --------
@@ -20,14 +21,14 @@ Nombre corto y título
 
 Colores
 ~~~~~~~~~~~~~~~~~~~
-|colors| 
+|colors|
 
 Se pueden escoger dos colores, y el diseño se adecuará a los mismos. Los colores han de ser especificados en código hexadecimal, y
 se puede usar la herramienta que ofrecemos como ayuda para elegirlos.
 
 Características
 ~~~~~~~~~~~~~~~~~~~
-|preferences| 
+|preferences|
 
 - Privado: habilitando esta opción las noticias del sub no pasarán a la edición general.
 - NSFW: para indicar si el sub contiene contenido no recomendado para todas las edades.
@@ -57,13 +58,6 @@ Logo
 |logo|
 
 Selección del logo del sub.
-
-
-Alta en la Edición Universidades
---------------
-
-Para que el sub aparezca en la Edición Universidades el usuario que cree el sub se lo comunicará al administrador mediante
-una cuenta de correo de la institución que representa para verificar que se trata de una persona afiliada a dicha institución
 
 .. |names| image:: http://i.imgur.com/4cRaUHz.png
 .. |colors| image:: http://i.imgur.com/7TKxK42.jpg

@@ -42,7 +42,6 @@ Desde el perfil de un usuario se le puede seguir, o ignorar.
 
 Suscripción a subs
 --------------------------------
-|suscribirse|
 
 Los usuarios pueden suscribirse a los subs que deseen para personalizar su portada. Tan solo hay que pulsar la estrella al lado
 del título para suscribirse. Una vez suscrito aparecerán en "mis suscripciones", para acceder cómodamente.
@@ -59,17 +58,15 @@ mediante un icono de verificado.
     :align: center
     :alt: perfiles verificadosi
     :target: http://i.imgur.com/TMoyCaw.gif
-    
-    
+
+
 
 .. |register| image:: http://i.imgur.com/oQREvI3.png
 .. |registrar| image:: http://i.imgur.com/GuPlzIu.png
-.. |profile| image:: http://i.imgur.com/soIrbLq.png 
-.. |profile_params| image:: http://i.imgur.com/owTU8Vi.png 
+.. |profile| image:: http://i.imgur.com/soIrbLq.png
+.. |profile_params| image:: http://i.imgur.com/owTU8Vi.png
 .. |preferences| image:: http://i.imgur.com/gu80SYS.png
 .. |redes_sociales| image:: http://i.imgur.com/K9yKxuF.png
 .. |following| image:: http://i.imgur.com/uvXLCLO.gif
 .. |suscribirse| image:: http://i.imgur.com/h0i9T85.gif
 .. |mis_suscripciones| image:: http://i.imgur.com/D4YfohJ.png
-
-

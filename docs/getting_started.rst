@@ -28,8 +28,7 @@ para acceder a las principales funciones de la web:
 - **Más Visitadas**: lugar en el que ver las historias que más visitas han recibido.
 - **Subs**: lugar en el que aparecen todos los subs creados por los usuarios.
 - **Fisgona**: lugar en el que ver todo lo que está pasando en divúlgame en tiempo real.
-- **Nótame**: es un muro en el que podrás charlar con la comunidad de divúlgame. Más información
-en la documentación.
+- **Nótame**: es un muro en el que podrás charlar con la comunidad de divúlgame. Más información en la documentación.
 
 
 .. |header| image:: http://i.imgur.com/Z8cqvdZ.png
