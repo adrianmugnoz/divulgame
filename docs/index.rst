@@ -104,12 +104,14 @@ Table of Contents
 
 .. toctree::
 
-   markup
-   options
-   methods
-   events
-   keyboard
-   i18n
+  getting_started
+  perfiles
+  creacion_sub
+  edicion_universidades
+  usos
+  faq
+  notame
+
 
 
 
@@ -119,4 +121,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
