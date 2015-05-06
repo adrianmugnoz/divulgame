@@ -15,3 +15,13 @@ Tabla de contenidos
   perfiles
   creacion_sub
   notame
+
+
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
