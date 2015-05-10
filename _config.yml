@@ -1,0 +1,45 @@
+# Build settings
+markdown: redcarpet
+highlighter: pygments
+
+# Site settings
+title: "Divúlgame.NET"
+description: > # this means to ignore newlines until "email:"
+   Blog corporativo
+email: adrianmugnoz@gmail.com
+#blog logo
+logo: "/assets/images/df_logo.jpg"
+# blog cover
+cover: "/assets/images/delfines.jpg"
+
+name: 'Adrián Muñoz'
+author: 'Adrián Muñoz'
+author_image: "/assets/images/author.jpg"
+
+paginate:	5
+
+url: "http://blog.divulgame.net" # the base hostname & protocol for your site
+baseurl: ""
+
+# social icons and sharing options
+social:
+  - icon:	twitter
+    url:	https://twitter.com/divulgame_net
+    desc: Síguenos en Twitter
+    share_url: http://twitter.com/share
+    share_title: ?text=
+    share_link: "&amp;url="
+
+  - icon:	facebook
+    url:	https://facebook.com/divulgame
+    desc: Síguenos en Facebook
+    share_url: //www.facebook.com/sharer.php
+    share_title: ?t=
+    share_link: "&amp;u="
+
+  - icon:	google-plus
+    url:	https://google.com/+divulgame
+    desc:	Añádenos en google+
+    share_url:
+    share_title:
+    share_link:

@@ -1,0 +1,17 @@
+.jumbotron {
+color: #fff;
+background: linear-gradient(45deg, #0B2464 0%,#2E596C 100%);
+}
+
+.jumbotron:before {
+content: '';
+display: block;
+position: absolute;
+top: 0;
+right: 0;
+bottom: 0;
+max-height: 240px;
+left: 0;
+opacity: .4;
+background: url(http://bootstrapdocs.com/v2.3.2/docs/assets/img/bs-docs-masthead-pattern.png) repeat center center;
+}
